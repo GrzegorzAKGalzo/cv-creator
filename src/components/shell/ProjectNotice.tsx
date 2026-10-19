@@ -34,7 +34,8 @@ export default function ProjectNotice() {
       <p>
         <strong className="font-semibold text-slate-900">To prosty projekt wykonany z pomocą AI.</strong> Mogą w nim
         występować błędy – przed wysłaniem CV sprawdź poprawność danych i wygenerowanego PDF. Analiza ATS jest orientacyjna
-        i nie gwarantuje, że Twoje CV przejdzie każdy system rekrutacyjny.
+        i nie gwarantuje, że Twoje CV przejdzie każdy system rekrutacyjny. Nie przetwarzamy Twoich danych – wszystko dzieje
+        się i zapisuje lokalnie w Twojej przeglądarce.
       </p>
       <button
         type="button"

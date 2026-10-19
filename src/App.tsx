@@ -10,6 +10,7 @@ import Toaster from './components/shell/Toaster'
 import ConfirmDialog from './components/shell/ConfirmDialog'
 import ProjectNotice from './components/shell/ProjectNotice'
 import CoffeeWidget from './components/shell/CoffeeWidget'
+import PrivacyNote from './components/shell/PrivacyNote'
 import { LogoMark } from './components/shell/Logo'
 import { useUiStore } from './components/shell/uiStore'
 import { useBootstrap } from './components/shell/useBootstrap'
@@ -49,6 +50,7 @@ export default function App() {
             }`}
           >
             <Editor />
+            <PrivacyNote />
           </section>
           <section
             id="pane-preview"
