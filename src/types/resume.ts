@@ -208,8 +208,11 @@ export type TemplateId = 'classic' | 'modern' | 'compact'
 
 export type FontSize = 'small' | 'medium' | 'large'
 
-/** 'text' => "May 2023" / "maj 2023"; 'numeric' => "05/2023" / "05.2023" */
+/** 'text' => "May 2023" / "maj 2023"; 'numeric' => "05/2023" (both languages) */
 export type DateFormat = 'text' | 'numeric'
+
+/** Vertical rhythm of the PDF: space around section headings and between entries. */
+export type Spacing = 'compact' | 'normal' | 'relaxed'
 
 export interface ResumeSettings {
   template: TemplateId
@@ -217,6 +220,7 @@ export interface ResumeSettings {
   accentColor: string
   fontSize: FontSize
   dateFormat: DateFormat
+  spacing: Spacing
   showPhoto: boolean
   /** Polish CVs usually need a GDPR (RODO) consent clause in the footer. */
   showGdpr: boolean

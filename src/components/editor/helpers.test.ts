@@ -31,7 +31,7 @@ describe('itemHeadline', () => {
 
 describe('itemDates', () => {
   it('formats ranges and single dates numerically in Polish', () => {
-    expect(itemDates({ ...createEmptyItem('experience'), startDate: '2020-01', current: true })).toBe('01.2020 – obecnie')
+    expect(itemDates({ ...createEmptyItem('experience'), startDate: '2020-01', current: true })).toBe('01/2020 – obecnie')
     expect(itemDates({ ...createEmptyItem('certifications'), date: '2022' })).toBe('2022')
     expect(itemDates(createEmptyItem('skills'))).toBe('')
   })

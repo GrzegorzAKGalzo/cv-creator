@@ -56,7 +56,8 @@ describe('serializeResume / parseResumeJson', () => {
           template: 'fancy',
           accentColor: 'red; background:url(x)',
           fontSize: 'large',
-          dateFormat: 'numeric',
+          dateFormat: 'text',
+          spacing: 'compact',
           showPhoto: 'true',
           showGdpr: 0,
           gdprText: 42,
@@ -68,11 +69,36 @@ describe('serializeResume / parseResumeJson', () => {
       template: 'classic',
       accentColor: defaultSettings('en').accentColor,
       fontSize: 'large',
-      dateFormat: 'numeric',
+      dateFormat: 'text',
+      spacing: 'compact',
       showPhoto: true,
       showGdpr: false,
       gdprText: '42',
     })
+  })
+
+  it('imports a v1 backup made before spacing existed', () => {
+    const r = createSampleResume('pl')
+    const { spacing: _spacing, ...oldSettings } = r.settings
+    const backup = JSON.stringify({
+      app: 'cv-kreator',
+      version: 1,
+      resume: { ...r, settings: { ...oldSettings, dateFormat: 'text' } },
+    })
+    const parsed = parseResumeJson(backup)
+    expect(parsed.settings.spacing).toBe('normal')
+    // An explicit choice from the backup is kept.
+    expect(parsed.settings.dateFormat).toBe('text')
+    expect(parsed.sections).toEqual(r.sections)
+  })
+
+  it('accepts valid spacing values and rejects unknown ones', () => {
+    const withSpacing = (spacing: unknown) =>
+      parseResumeJson(JSON.stringify({ sections: [], settings: { spacing } })).settings.spacing
+    expect(withSpacing('compact')).toBe('compact')
+    expect(withSpacing('relaxed')).toBe('relaxed')
+    expect(withSpacing('huge')).toBe('normal')
+    expect(withSpacing(3)).toBe('normal')
   })
 
   it('falls back to "pl" for an unknown language', () => {

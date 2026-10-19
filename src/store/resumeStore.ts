@@ -237,8 +237,18 @@ export const useResumeStore = create<ResumeState>()(
     }),
     {
       name: 'cv-kreator',
-      version: 1,
+      version: 2,
       partialize: (state) => ({ resumes: state.resumes, activeId: state.activeId }),
+      migrate: (persisted, version) => {
+        const state = persisted as Pick<ResumeState, 'resumes' | 'activeId'>
+        if (version < 2) {
+          // v2: numeric dates ("02/2024") became the default and `spacing` was added.
+          for (const r of state.resumes ?? []) {
+            r.settings = { ...r.settings, dateFormat: 'numeric', spacing: r.settings.spacing ?? 'normal' }
+          }
+        }
+        return state as ResumeState
+      },
     },
   ),
 )

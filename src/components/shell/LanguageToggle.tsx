@@ -109,7 +109,7 @@ export default function LanguageToggle() {
               </dt>
               <dd className="min-w-0 text-slate-300">
                 <span className="text-white">{CV_LABELS[o.value].sections.experience}</span>,{' '}
-                {formatDateRange('2023-05', '', true, o.value, fmt)}
+                {formatDateRange('2024-02', '', true, o.value, fmt)}
               </dd>
             </div>
           ))}

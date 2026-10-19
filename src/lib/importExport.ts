@@ -10,6 +10,7 @@ import type {
   ResumeSettings,
   Section,
   SectionType,
+  Spacing,
   TemplateId,
 } from '../types/resume'
 import { createEmptyItem, createSection, defaultSettings, emptyPersonal, SECTION_TYPES, uid } from './factory'
@@ -64,6 +65,7 @@ const LANGUAGES: CvLanguage[] = ['pl', 'en']
 const TEMPLATES: TemplateId[] = ['classic', 'modern', 'compact']
 const FONT_SIZES: FontSize[] = ['small', 'medium', 'large']
 const DATE_FORMATS: DateFormat[] = ['text', 'numeric']
+const SPACINGS: Spacing[] = ['compact', 'normal', 'relaxed']
 const LANGUAGE_LEVELS: LanguageLevel[] = ['', 'A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'native']
 const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i
 
@@ -93,6 +95,7 @@ function normalizeSettings(raw: unknown, language: CvLanguage): ResumeSettings {
     accentColor: HEX.test(accent) ? accent : base.accentColor,
     fontSize: oneOf(raw.fontSize, FONT_SIZES, base.fontSize),
     dateFormat: oneOf(raw.dateFormat, DATE_FORMATS, base.dateFormat),
+    spacing: oneOf(raw.spacing, SPACINGS, base.spacing),
     showPhoto: toBool(raw.showPhoto, base.showPhoto),
     showGdpr: toBool(raw.showGdpr, base.showGdpr),
     gdprText: toStr(raw.gdprText),

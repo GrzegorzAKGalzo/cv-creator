@@ -427,9 +427,13 @@ export function ResumeDocument({ resume }: { resume: Resume }) {
           <SectionView key={section.id} section={section} ctx={ctx} />
         ))}
         {gdpr ? (
-          <Text style={t.s.gdpr} wrap={false}>
-            {gdpr}
-          </Text>
+          // Pushed to the bottom of the LAST page by an auto top margin. It stays in the
+          // normal flow (no fixed/absolute), so it can never overlap content, it is
+          // extracted once after all content, and if the last page is full the whole
+          // block moves to the bottom of a new page.
+          <View style={t.s.gdprBox} wrap={false}>
+            <Text style={t.s.gdpr}>{gdpr}</Text>
+          </View>
         ) : null}
         <Text
           fixed

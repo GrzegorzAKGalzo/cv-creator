@@ -195,6 +195,8 @@ export function fullResume(language: CvLanguage = 'pl'): Resume {
     ]),
   ]
   r.settings.showGdpr = true
+  // Month-name assertions rely on the text format (the app default is numeric).
+  r.settings.dateFormat = 'text'
   return r
 }
 

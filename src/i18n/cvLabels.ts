@@ -10,7 +10,7 @@ export interface CvLabels {
   months: string[]
   /** Separator between start and end date. */
   dateRangeSeparator: string
-  /** Separator used in numeric dates: "05/2023" (en) vs "05.2023" (pl). */
+  /** Separator used in numeric dates, e.g. "05/2023". */
   numericDateSeparator: string
   contact: {
     email: string
@@ -104,7 +104,7 @@ export const CV_LABELS: Record<CvLanguage, CvLabels> = {
     present: 'obecnie',
     months: ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'],
     dateRangeSeparator: ' – ',
-    numericDateSeparator: '.',
+    numericDateSeparator: '/',
     contact: {
       email: 'E-mail',
       phone: 'Telefon',

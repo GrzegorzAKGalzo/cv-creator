@@ -38,7 +38,7 @@ export function profileUrl(value: string, base: string): string {
   return v
 }
 
-/** '1990-03-12' -> '12 mar 1990' / '12.03.1990'. Any other string is returned as typed. */
+/** '1990-03-12' -> '12 mar 1990' (text) / '12/03/1990' (numeric, CV separator). Other strings are returned as typed. */
 export function formatBirthDate(value: string, language: CvLanguage, format: DateFormat): string {
   const v = clean(value)
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v)

@@ -8,7 +8,7 @@ describe('dates', () => {
   it('formats text and numeric dates per language', () => {
     expect(formatDate('2023-05', 'en')).toBe('May 2023')
     expect(formatDate('2023-10', 'pl')).toBe('paź 2023')
-    expect(formatDate('2023-05', 'pl', 'numeric')).toBe('05.2023')
+    expect(formatDate('2023-05', 'pl', 'numeric')).toBe('05/2023')
     expect(formatDate('2023-05', 'en', 'numeric')).toBe('05/2023')
     expect(formatDate('2023', 'en')).toBe('2023')
     expect(formatDate('', 'en')).toBe('')

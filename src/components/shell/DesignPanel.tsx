@@ -1,4 +1,4 @@
-import type { DateFormat, FontSize, TemplateId } from '../../types/resume'
+import type { DateFormat, FontSize, Spacing, TemplateId } from '../../types/resume'
 import { useActiveResume, useResumeStore } from '../../store/resumeStore'
 import { CV_LABELS } from '../../i18n/cvLabels'
 import { formatDate } from '../../lib/dates'
@@ -18,8 +18,8 @@ const ACCENT_SWATCHES: { value: string; name: string }[] = [
 
 const TEMPLATES: { id: TemplateId; name: string; description: string }[] = [
   { id: 'classic', name: 'Klasyczny', description: 'Jedna kolumna, wyśrodkowany nagłówek' },
-  { id: 'modern', name: 'Nowoczesny', description: 'Boczna kolumna z kontaktem i umiejętnościami' },
-  { id: 'compact', name: 'Kompaktowy', description: 'Gęsty układ, więcej treści na stronie' },
+  { id: 'modern', name: 'Nowoczesny', description: 'Jedna kolumna, kolorowe imię i akcenty przy nagłówkach' },
+  { id: 'compact', name: 'Kompaktowy', description: 'Jedna kolumna, gęsty układ – więcej treści na stronie' },
 ]
 
 const FONT_SIZES: { value: FontSize; label: string }[] = [
@@ -27,6 +27,14 @@ const FONT_SIZES: { value: FontSize; label: string }[] = [
   { value: 'medium', label: 'Średni' },
   { value: 'large', label: 'Duży' },
 ]
+
+const SPACINGS: { value: Spacing; label: string }[] = [
+  { value: 'compact', label: 'Ciasne' },
+  { value: 'normal', label: 'Normalne' },
+  { value: 'relaxed', label: 'Przestronne' },
+]
+
+const SAMPLE_DATE = '2024-02'
 
 /** <input type=color> needs #rrggbb. */
 const toHex6 = (c: string) => (/^#[0-9a-f]{3}$/i.test(c) ? `#${[...c.slice(1)].map((x) => x + x).join('')}` : c)
@@ -53,17 +61,15 @@ function TemplateThumb({ id, accent }: { id: TemplateId; accent: string }) {
       )}
       {id === 'modern' && (
         <>
-          <rect x="0" y="0" width="19" height="78" rx="2" fill={accent} opacity="0.12" />
-          <circle cx="9.5" cy="11" r="5" fill={accent} opacity="0.35" />
-          {lines(4, 22, 11, 3)}
-          <rect x="4" y="38" width="9" height="1.8" rx="0.9" fill={accent} />
-          {lines(4, 43, 11, 5)}
-          <rect x="24" y="7" width="24" height="3" rx="1.5" fill="#334155" />
-          <rect x="24" y="12.5" width="15" height="1.6" rx="0.8" fill={accent} />
-          <rect x="24" y="21" width="13" height="2" rx="1" fill={accent} />
-          {lines(24, 26, 30, 5)}
-          <rect x="24" y="48" width="13" height="2" rx="1" fill={accent} />
-          {lines(24, 53, 30, 5)}
+          <rect x="7" y="7" width="28" height="3.4" rx="1.7" fill={accent} />
+          <rect x="7" y="12.8" width="18" height="1.6" rx="0.8" fill={line} />
+          <rect x="7" y="18" width="46" height="0.9" fill={accent} />
+          <rect x="7" y="22" width="1.2" height="3" fill={accent} />
+          <rect x="10" y="22.5" width="13" height="2" rx="1" fill="#334155" />
+          {lines(7, 28, 46, 4)}
+          <rect x="7" y="45" width="1.2" height="3" fill={accent} />
+          <rect x="10" y="45.5" width="13" height="2" rx="1" fill="#334155" />
+          {lines(7, 51, 46, 5)}
         </>
       )}
       {id === 'compact' && (
@@ -74,9 +80,9 @@ function TemplateThumb({ id, accent }: { id: TemplateId; accent: string }) {
           <rect x="6" y="18.5" width="11" height="1.8" rx="0.9" fill={accent} />
           {lines(6, 22.5, 48, 6, 3)}
           <rect x="6" y="42" width="11" height="1.8" rx="0.9" fill={accent} />
-          {lines(6, 46, 22, 7, 3)}
-          {lines(32, 46, 22, 7, 3)}
-          <rect x="6" y="68" width="48" height="1.4" rx="0.7" fill={line} />
+          {lines(6, 46, 48, 6, 3)}
+          <rect x="6" y="65" width="11" height="1.8" rx="0.9" fill={accent} />
+          {lines(6, 69, 48, 2, 3)}
         </>
       )}
     </svg>
@@ -92,8 +98,8 @@ export default function DesignPanel() {
   const isSwatch = ACCENT_SWATCHES.some((c) => c.value.toLowerCase() === s.accentColor.toLowerCase())
 
   const dateOptions: { value: DateFormat; label: string }[] = [
-    { value: 'text', label: formatDate('2023-05', lang, 'text') },
-    { value: 'numeric', label: formatDate('2023-05', lang, 'numeric') },
+    { value: 'numeric', label: formatDate(SAMPLE_DATE, lang, 'numeric') },
+    { value: 'text', label: formatDate(SAMPLE_DATE, lang, 'text') },
   ]
 
   return (
@@ -191,6 +197,15 @@ export default function DesignPanel() {
           value={s.fontSize}
           options={FONT_SIZES}
           onChange={(fontSize) => updateSettings({ fontSize })}
+        />
+      </FieldGroup>
+
+      <FieldGroup title="Odstępy" hint="Ciasne pomagają zmieścić CV na jednej stronie.">
+        <Segmented
+          ariaLabel="Odstępy"
+          value={s.spacing}
+          options={SPACINGS}
+          onChange={(spacing) => updateSettings({ spacing })}
         />
       </FieldGroup>
 

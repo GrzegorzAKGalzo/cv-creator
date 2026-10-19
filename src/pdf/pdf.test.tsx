@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { getDocument, OPS } from 'pdfjs-dist/legacy/build/pdf.mjs'
-import type { FontSize, Resume, Section, TemplateId } from '../types/resume'
+import type { FontSize, Resume, Section, Spacing, TemplateId } from '../types/resume'
 import { createEmptyResume, createSection } from '../lib/factory'
 import { CV_LABELS } from '../i18n/cvLabels'
 import { pdfFileName } from './index'
+import { buildTheme } from './theme'
 import { env, extract, fullResume, nodeFs, renderAndExtract, renderResume } from './testing'
 
 const TEMPLATES: TemplateId[] = ['classic', 'modern', 'compact']
@@ -88,7 +89,8 @@ describe('language switching', () => {
     const r = fullResume('pl')
     r.settings.dateFormat = 'numeric'
     const x = await renderAndExtract(r)
-    expect(x.text).toContain('10.2021 – obecnie')
+    expect(x.text).toContain('10/2021 – obecnie')
+    expect(x.text).toContain('Data urodzenia: 12/03/1990')
     const en = fullResume('en')
     en.settings.dateFormat = 'numeric'
     expect((await renderAndExtract(en)).text).toContain('10/2021 – Present')
@@ -195,7 +197,7 @@ describe('ATS safety', () => {
     expect(x.text).toContain('jan@example.com | Gdańsk\n')
     expect(x.text).toContain('github.com/jank')
     expect(x.text).toContain('Tester\nGdańsk')
-    expect(x.text).toContain('ACME sty 2020')
+    expect(x.text).toContain('ACME 01/2020')
     expect(x.text).not.toMatch(/\|\s*\|/)
     expect(x.text).not.toMatch(/(^|\n)\s*[|,–]/)
     expect(x.text).not.toMatch(/[|,–]\s*(\n|$)/)
@@ -271,42 +273,75 @@ async function pageOneLines(data: Uint8Array): Promise<{ numPages: number; lines
   return { numPages, lines }
 }
 
+const SPACINGS: Spacing[] = ['compact', 'normal', 'relaxed']
+const num = (v: unknown) => (typeof v === 'number' ? v : 0)
+
+/** Resume whose summary has `n` bullets, followed by a one-line Languages section and more content. */
+function sweepResume(template: TemplateId, spacing: Spacing, n: number, gdpr = false): Resume {
+  const r = createEmptyResume('en')
+  r.settings.template = template
+  r.settings.spacing = spacing
+  r.settings.showGdpr = gdpr
+  r.personal.firstName = 'Jan'
+  r.personal.lastName = 'Kowalski'
+  const summary = section(r, 'summary')
+  summary.content = Array.from({ length: n }, (_, i) => `- Achievement number ${i + 1}`).join('\n')
+  section(r, 'languages').items = [{ id: 'l', name: 'English', level: 'C1' }]
+  // More content follows Languages (as in a real CV), so a fixed presence reservation would bite.
+  r.sections = r.sections.filter((s) => s.type === 'summary' || s.type === 'languages')
+  const extra = createSection('interests') as Extract<Section, { type: 'interests' }>
+  extra.items = Array.from({ length: 40 }, (_, i) => ({ id: `i${i}`, name: `Interest ${i}` }))
+  r.sections.push(extra)
+  return r
+}
+
+/** Smallest n in [lo, hi] for which the (monotonic) predicate holds, by binary search. */
+async function firstN(pred: (n: number) => Promise<boolean>, lo = 1, hi = 160): Promise<number> {
+  while (lo < hi) {
+    const mid = Math.floor((lo + hi) / 2)
+    if (await pred(mid)) hi = mid
+    else lo = mid + 1
+  }
+  return lo
+}
+
+const firstNWithPages = (make: (n: number) => Resume, pages: number) =>
+  firstN(async (n) => (await pageOneLines(await renderResume(make(n)))).numPages >= pages)
+
+const TEMPLATE_SPACINGS = TEMPLATES.flatMap((t) => SPACINGS.map((sp) => [t, sp] as const))
+
 describe('page breaks', () => {
-  it.each(TEMPLATES)(
-    '%s: a one-line section is not pushed to the next page when it fits',
-    async (template) => {
-      // Fill page 1 with a growing summary so the page boundary sweeps across the
-      // following one-line Languages section. Whenever Languages ends up on page 2,
-      // page 1 must not have had room for it (gap + heading + one line ≈ 45–50pt).
-      // With the old fixed 80pt reservation this failed with 60–90pt left empty.
+  it.each(TEMPLATE_SPACINGS)(
+    '%s/%s: a one-line section is not pushed to the next page when it fits',
+    async (template, spacing) => {
+      // Grow the summary so the page boundary sweeps across the following one-line
+      // Languages section. Whenever Languages ends up on page 2, page 1 must not
+      // have had room for it (section gap + heading + one line, from the theme).
+      // With the old fixed 80pt reservation this failed with 60–115pt left empty.
+      const t = buildTheme({ template, spacing, fontSize: 'medium', accentColor: '' })
+      const needed =
+        num(t.s.sectionStart.marginTop) +
+        num(t.s.heading.fontSize) * num(t.s.heading.lineHeight) +
+        num(t.s.headingWrap.paddingBottom) +
+        num(t.s.headingWrap.marginBottom) +
+        t.bodySize * num(t.s.inlineList.lineHeight)
+      const bottomMargin = num(t.s.page.paddingBottom)
+      const languagesOnPageOne = (lines: { text: string }[]) => lines.some((l) => l.text.includes('English – Advanced (C1)'))
+      // first n for which Languages no longer starts on page 1; sweep across that boundary
+      const n0 = await firstN(async (n) => !languagesOnPageOne((await pageOneLines(await renderResume(sweepResume(template, spacing, n)))).lines))
       let sawFitOnPageOne = false
       let sawPushed = false
-      const [from, to] = template === 'compact' ? [50, 66] : [36, 48]
-      for (let n = from; n <= to; n++) {
-        const r = createEmptyResume('en')
-        r.settings.template = template
-        r.settings.showGdpr = false
-        r.personal.firstName = 'Jan'
-        r.personal.lastName = 'Kowalski'
-        const summary = section(r, 'summary')
-        summary.content = Array.from({ length: n }, (_, i) => `- Achievement number ${i + 1}`).join('\n')
-        section(r, 'languages').items = [{ id: 'l', name: 'English', level: 'C1' }]
-        // More content follows Languages (as in a real CV), so a fixed presence reservation would bite.
-        r.sections = r.sections.filter((s) => s.type === 'summary' || s.type === 'languages')
-        const extra = createSection('interests') as Extract<Section, { type: 'interests' }>
-        extra.items = Array.from({ length: 40 }, (_, i) => ({ id: `i${i}`, name: `Interest ${i}` }))
-        r.sections.push(extra)
-        const { numPages, lines } = await pageOneLines(await renderResume(r))
-        const onPageOne = lines.some((l) => l.text.includes('English – Advanced (C1)'))
-        // Free space between the lowest text baseline and the bottom margin.
-        const lowest = Math.min(...lines.map((l) => l.y))
-        const bottomMargin = { classic: 50, modern: 46, compact: 30 }[template]
-        const free = lowest - bottomMargin
+      for (let n = n0 - 2; n <= n0 + 3; n++) {
+        const { numPages, lines } = await pageOneLines(await renderResume(sweepResume(template, spacing, n)))
+        expect(numPages).toBe(2)
+        const onPageOne = languagesOnPageOne(lines)
+        // Free space between the lowest text baseline and the bottom margin (overstates by the descent).
+        const free = Math.min(...lines.map((l) => l.y)) - bottomMargin
         if (onPageOne) sawFitOnPageOne = true
         else {
-          expect(numPages).toBe(2)
           sawPushed = true
-          expect(free, `n=${n}: Languages pushed although ${free.toFixed(0)}pt were free`).toBeLessThan(55)
+          const msg = `n=${n}: Languages pushed although ${free.toFixed(0)}pt were free (needs ${needed.toFixed(0)})`
+          expect(free, msg).toBeLessThan(needed + 3)
         }
       }
       expect(sawFitOnPageOne).toBe(true)
@@ -315,20 +350,92 @@ describe('page breaks', () => {
     T,
   )
 
-  it.each(TEMPLATES)('%s: a very long inline list never orphans its heading', async (template) => {
-    for (let extra = 0; extra < 6; extra++) {
-      const r = fullResume('pl')
-      r.settings.template = template
-      section(r, 'skills').items = Array.from({ length: 70 }, (_, i) => ({ id: `s${i}`, name: `Umiejętność${i}`, level: 0 }))
-      const exp = section(r, 'experience')
-      for (let i = 0; i < extra; i++) exp.items.push({ ...exp.items[1], id: `x${i}` })
-      const x = await renderAndExtract(r)
-      const headings = Object.values(CV_LABELS.pl.sections)
-      for (const page of x.pages.slice(0, -1)) {
-        const lines = page.split('\n').map((l) => l.trim()).filter((l) => l && !/^\d+ \/ \d+$/.test(l))
-        expect(headings).not.toContain(lines[lines.length - 1])
+  it.each(TEMPLATE_SPACINGS)(
+    '%s/%s: a very long inline list never orphans its heading',
+    async (template, spacing) => {
+      for (let extra = 0; extra < 6; extra++) {
+        const r = fullResume('pl')
+        r.settings.template = template
+        r.settings.spacing = spacing
+        section(r, 'skills').items = Array.from({ length: 70 }, (_, i) => ({ id: `s${i}`, name: `Umiejętność${i}`, level: 0 }))
+        const exp = section(r, 'experience')
+        for (let i = 0; i < extra; i++) exp.items.push({ ...exp.items[1], id: `x${i}` })
+        const x = await renderAndExtract(r)
+        const headings = Object.values(CV_LABELS.pl.sections)
+        for (const page of x.pages.slice(0, -1)) {
+          const lines = page.split('\n').map((l) => l.trim()).filter((l) => l && !/^\d+ \/ \d+$/.test(l))
+          expect(headings).not.toContain(lines[lines.length - 1])
+        }
+        expect(x.text).toContain('Umiejętność69')
       }
-      expect(x.text).toContain('Umiejętność69')
+    },
+    T,
+  )
+})
+
+/** Baselines (pt from the page bottom) and heights of the text items on one page, page numbers excluded. */
+async function pageItems(data: Uint8Array, pageNo: number) {
+  const task = getDocument({ data: data.slice(), verbosity: 0 })
+  const doc = await task.promise
+  const content = await (await doc.getPage(pageNo)).getTextContent()
+  const items: { text: string; y: number; h: number }[] = []
+  for (const it of content.items) {
+    if (!('str' in it) || !it.str.trim() || /^\d+ \/ \d+$/.test(it.str.trim())) continue
+    items.push({ text: it.str, y: it.transform[5], h: it.height })
+  }
+  await task.destroy()
+  return items
+}
+
+describe('GDPR clause placement', () => {
+  const MARK = 'KLAUZULAZGODY'
+  const LONG = `${MARK} ` + 'Wyrażam zgodę na przetwarzanie moich danych osobowych w celach rekrutacji. '.repeat(8)
+  const isClause = (text: string) => /KLAUZULAZGODY|Wyrażam|zgodę|danych|rekrutacji|RODO|Parlamentu|Rozporządzeniem|kwietnia/.test(text)
+
+  it.each(TEMPLATES.flatMap((t) => (['small', 'medium', 'large'] as FontSize[]).map((f) => [t, f] as const)))(
+    '%s/%s: sits at the bottom of the last page, once, after all content',
+    async (template, fontSize) => {
+      for (const custom of ['', LONG]) {
+        const r = fullResume('pl')
+        r.settings.template = template
+        r.settings.fontSize = fontSize
+        r.settings.gdprText = custom
+        const data = await renderResume(r)
+        const x = await extract(data)
+        const start = custom ? MARK : 'Wyrażam zgodę'
+        expect(countOf(x.text, start)).toBe(1)
+        // only on the last page, and after all content in reading order
+        x.pages.slice(0, -1).forEach((p) => expect(p).not.toContain(start))
+        expect(x.flat.indexOf(start)).toBeGreaterThan(x.flat.indexOf('Wystąpienie o wydajności.'))
+        // at the bottom margin, above the page number, below (never over) the content
+        const t = buildTheme(r.settings)
+        const items = await pageItems(data, x.numPages)
+        const clause = items.filter((i) => isClause(i.text))
+        const content = items.filter((i) => !isClause(i.text))
+        const clauseBottom = Math.min(...clause.map((i) => i.y))
+        expect(clauseBottom - num(t.s.page.paddingBottom)).toBeLessThan(6)
+        expect(clauseBottom).toBeGreaterThan(num(t.s.pageNumber.bottom) + 4)
+        expect(Math.min(...content.map((i) => i.y))).toBeGreaterThan(Math.max(...clause.map((i) => i.y + i.h)))
+      }
+    },
+    T,
+  )
+
+  it.each(TEMPLATES)('%s: works on a one-page CV and moves to a new page when the last page is full', async (template) => {
+    const make = (n: number) => sweepResume(template, 'normal', n, true)
+    const n0 = await firstNWithPages(make, 2) // first n where content + clause no longer fit on one page
+    const t = buildTheme({ template, spacing: 'normal', fontSize: 'medium', accentColor: '' })
+    const isEnClause = (text: string) => /consent|recruitment|GDPR|Regulation|Council|application/.test(text)
+    for (let n = n0 - 2; n <= n0 + 3; n++) {
+      const data = await renderResume(make(n))
+      const x = await extract(data)
+      expect(countOf(x.text, 'I hereby consent')).toBe(1)
+      expect(x.pages[x.numPages - 1]).toContain('I hereby consent')
+      const items = await pageItems(data, x.numPages)
+      const clause = items.filter((i) => isEnClause(i.text))
+      const content = items.filter((i) => !isEnClause(i.text))
+      expect(Math.min(...clause.map((i) => i.y)) - num(t.s.page.paddingBottom), `n=${n}`).toBeLessThan(6)
+      if (content.length) expect(Math.min(...content.map((i) => i.y))).toBeGreaterThan(Math.max(...clause.map((i) => i.y + i.h)))
     }
   }, T)
 })
@@ -358,20 +465,23 @@ describe('templates', () => {
   }, T)
 
   it.each(TEMPLATES.flatMap((t) => (['small', 'medium', 'large'] as FontSize[]).map((f) => [t, f] as const)))(
-    '%s/%s never leaves a section heading orphaned at the bottom of a page',
+    '%s/%s (every spacing) never leaves a section heading orphaned at the bottom of a page',
     async (template, fontSize) => {
       const headings = Object.values(CV_LABELS.pl.sections)
       // Vary the amount of experience so section boundaries land on different spots of the page.
-      for (let extra = 0; extra < 4; extra++) {
-        const r = fullResume('pl')
-        r.settings.template = template
-        r.settings.fontSize = fontSize
-        const exp = section(r, 'experience')
-        for (let i = 0; i < extra; i++) exp.items.push({ ...exp.items[1], id: `x${i}` })
-        const x = await renderAndExtract(r)
-        for (const page of x.pages.slice(0, -1)) {
-          const lines = page.split('\n').map((l) => l.trim()).filter((l) => l && !/^\d+ \/ \d+$/.test(l))
-          expect(headings, `${template}/${fontSize}/+${extra}`).not.toContain(lines[lines.length - 1])
+      for (const spacing of SPACINGS) {
+        for (let extra = 0; extra < 4; extra++) {
+          const r = fullResume('pl')
+          r.settings.template = template
+          r.settings.fontSize = fontSize
+          r.settings.spacing = spacing
+          const exp = section(r, 'experience')
+          for (let i = 0; i < extra; i++) exp.items.push({ ...exp.items[1], id: `x${i}` })
+          const x = await renderAndExtract(r)
+          for (const page of x.pages.slice(0, -1)) {
+            const lines = page.split('\n').map((l) => l.trim()).filter((l) => l && !/^\d+ \/ \d+$/.test(l))
+            expect(headings, `${template}/${fontSize}/${spacing}/+${extra}`).not.toContain(lines[lines.length - 1])
+          }
         }
       }
     },

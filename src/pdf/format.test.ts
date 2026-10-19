@@ -45,7 +45,7 @@ describe('format helpers', () => {
   })
   it('formats birth dates', () => {
     expect(formatBirthDate('1990-03-12', 'pl', 'text')).toBe('12 mar 1990')
-    expect(formatBirthDate('1990-03-12', 'pl', 'numeric')).toBe('12.03.1990')
+    expect(formatBirthDate('1990-03-12', 'pl', 'numeric')).toBe('12/03/1990')
     expect(formatBirthDate('1990-03-12', 'en', 'numeric')).toBe('12/03/1990')
     expect(formatBirthDate('12 marca 1990', 'pl', 'text')).toBe('12 marca 1990')
   })

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { useActiveResume } from '../../store/resumeStore'
-import type { PDFDocumentLoadingTask, RenderTask } from './pdfjs'
+import type { PDFDocumentLoadingTask, PDFPageProxy, RenderTask } from './pdfjs'
 import { errorMessage, usePdfDocument, type LoadedPdf } from './usePdfDocument'
 
 /** CSS pixels per PDF point at 100% zoom. */
@@ -13,27 +13,67 @@ const MAX_CANVAS_PX = 4096
 
 type Zoom = 'fit' | number
 
+/** Clickable area in PDF points, origin at the top-left corner of the page. */
+interface PageLink {
+  url: string
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
 interface RenderedPage {
   canvas: HTMLCanvasElement
   /** Page size in PDF points. */
   width: number
   height: number
+  links: PageLink[]
 }
 
-/** Mounts an already-rendered (offscreen) canvas – lets us swap pages without flicker. */
+const SAFE_URL = /^(https?:|mailto:|tel:)/i
+
+/** URI link annotations of a page, converted to top-left based point coordinates. */
+async function pageLinks(page: PDFPageProxy): Promise<PageLink[]> {
+  const viewport = page.getViewport({ scale: 1 })
+  const annotations: { subtype?: string; url?: string; rect?: number[] }[] = await page.getAnnotations()
+  return annotations.flatMap((a) => {
+    if (a.subtype !== 'Link' || !a.url || !SAFE_URL.test(a.url) || !a.rect) return []
+    const [x1, y1] = viewport.convertToViewportPoint(a.rect[0], a.rect[1]) as number[]
+    const [x2, y2] = viewport.convertToViewportPoint(a.rect[2], a.rect[3]) as number[]
+    return [{ url: a.url, x: Math.min(x1, x2), y: Math.min(y1, y2), w: Math.abs(x2 - x1), h: Math.abs(y2 - y1) }]
+  })
+}
+
+/**
+ * Mounts an already-rendered (offscreen) canvas – lets us swap pages without flicker –
+ * plus a transparent link layer. Link boxes are stored in PDF points and scaled with
+ * the current zoom, so they stay aligned while the bitmap is being re-rendered.
+ */
 function PageCanvas({ page, scale, index }: { page: RenderedPage; scale: number; index: number }) {
   const ref = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
-    const el = ref.current
-    if (el) el.replaceChildren(page.canvas)
+    if (ref.current) ref.current.replaceChildren(page.canvas)
   }, [page])
   return (
     <div
-      ref={ref}
       data-page={index + 1}
-      className="mx-auto overflow-hidden bg-white shadow-[0_1px_3px_rgba(0,0,0,0.12),0_8px_24px_rgba(0,0,0,0.10)] ring-1 ring-black/5"
+      className="relative mx-auto overflow-hidden bg-white shadow-[0_1px_3px_rgba(0,0,0,0.12),0_8px_24px_rgba(0,0,0,0.10)] ring-1 ring-black/5"
       style={{ width: Math.round(page.width * scale), height: Math.round(page.height * scale) }}
-    />
+    >
+      <div ref={ref} className="absolute inset-0" />
+      {page.links.map((l, i) => (
+        <a
+          key={i}
+          href={l.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          title={l.url.replace(/^mailto:/i, '')}
+          aria-label={l.url.replace(/^mailto:/i, '')}
+          className="absolute cursor-pointer rounded-[2px] transition-colors hover:bg-blue-500/10 hover:ring-1 hover:ring-blue-500/40 focus-visible:bg-blue-500/10 focus-visible:outline-2 focus-visible:outline-blue-500"
+          style={{ left: l.x * scale, top: l.y * scale, width: l.w * scale, height: l.h * scale }}
+        />
+      ))}
+    </div>
   )
 }
 
@@ -134,9 +174,9 @@ export default function Preview() {
           canvas.height = Math.floor(viewport.height)
           const task = page.render({ canvas, viewport })
           tasks.push(task)
-          await task.promise
+          const [links] = await Promise.all([pageLinks(page), task.promise])
           if (cancelled) return
-          out.push({ canvas, width: base.width, height: base.height })
+          out.push({ canvas, width: base.width, height: base.height, links })
         }
         renderedFor.current = { loaded, scale: cssScale, dpr }
         setPages(out)

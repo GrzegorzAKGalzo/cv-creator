@@ -10,7 +10,7 @@ export function parseYearMonth(value: string): { year: number; month: number | n
   return { year: Number(m[1]), month }
 }
 
-/** 'May 2023' / 'maj 2023' (text) or '05/2023' / '05.2023' (numeric). '' if not set. */
+/** 'May 2023' / 'maj 2023' (text) or '05/2023' (numeric). '' if not set. */
 export function formatDate(value: string, language: CvLanguage, format: DateFormat = 'text'): string {
   const d = parseYearMonth(value)
   if (!d) return ''
