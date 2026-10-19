@@ -22,9 +22,3 @@ npm run build      # build produkcyjny do dist/
 - `src/components/shell/` – pasek narzędzi, wygląd, analiza ATS, menu
 - `src/lib/ats.ts` – analiza ATS i dopasowanie słów kluczowych z ogłoszenia
 - `src/lib/importExport.ts` – kopia zapasowa JSON
-
-## Zastrzeżenia
-
-- To prosty projekt wykonany z pomocą AI. Mogą w nim występować błędy – przed wysłaniem CV sprawdź poprawność danych i wygenerowanego PDF.
-- Analiza ATS jest orientacyjna: każdy system rekrutacyjny działa inaczej, a analiza opiera się na uproszczonych regułach. Nie daje 100% pewności ani gwarancji przejścia selekcji.
-- Dane CV są przechowywane wyłącznie lokalnie w przeglądarce (localStorage) – rób kopie zapasowe przez „Więcej → Zapisz kopię (JSON)”.
