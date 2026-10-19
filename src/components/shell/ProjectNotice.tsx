@@ -28,7 +28,7 @@ export default function ProjectNotice() {
   return (
     <aside
       aria-label="Informacja o projekcie"
-      className="pop-in fixed inset-x-4 bottom-[calc(max(1rem,env(safe-area-inset-bottom))+4rem)] z-30 flex gap-3 rounded-xl border border-slate-200 bg-white/95 p-3.5 pr-2.5 text-[13px] leading-relaxed text-slate-600 shadow-lg shadow-slate-900/10 backdrop-blur sm:right-auto sm:max-w-sm lg:bottom-4 lg:left-4"
+      className="pop-in fixed inset-x-4 bottom-[calc(max(1rem,env(safe-area-inset-bottom))+7rem)] z-30 flex gap-3 rounded-xl border border-slate-200 bg-white/95 p-3.5 pr-2.5 text-[13px] leading-relaxed text-slate-600 shadow-lg shadow-slate-900/10 backdrop-blur sm:right-auto sm:max-w-sm lg:bottom-4 lg:left-4"
     >
       <InfoIcon className="mt-0.5 shrink-0 text-indigo-600" />
       <p>

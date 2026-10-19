@@ -9,6 +9,7 @@ import AtsPanel from './components/shell/AtsPanel'
 import Toaster from './components/shell/Toaster'
 import ConfirmDialog from './components/shell/ConfirmDialog'
 import ProjectNotice from './components/shell/ProjectNotice'
+import CoffeeWidget from './components/shell/CoffeeWidget'
 import { LogoMark } from './components/shell/Logo'
 import { useUiStore } from './components/shell/uiStore'
 import { useBootstrap } from './components/shell/useBootstrap'
@@ -43,7 +44,7 @@ export default function App() {
             id="pane-editor"
             role="tabpanel"
             aria-label="Edycja CV"
-            className={`min-w-0 overflow-y-auto overscroll-contain bg-white pb-24 lg:block lg:w-[48%] lg:max-w-[880px] lg:shrink-0 lg:border-r lg:border-slate-200 lg:pb-0 ${
+            className={`min-w-0 overflow-y-auto overscroll-contain bg-white pb-36 lg:block lg:w-[48%] lg:max-w-[880px] lg:shrink-0 lg:border-r lg:border-slate-200 lg:pb-0 ${
               tab === 'edit' ? 'block w-full' : 'hidden'
             }`}
           >
@@ -53,7 +54,7 @@ export default function App() {
             id="pane-preview"
             role="tabpanel"
             aria-label="Podgląd CV"
-            className={`desk min-w-0 flex-1 overflow-y-auto overscroll-contain pb-24 lg:block lg:pb-0 ${
+            className={`desk min-w-0 flex-1 overflow-y-auto overscroll-contain pb-36 lg:block lg:pb-20 ${
               tab === 'preview' ? 'block' : 'hidden'
             }`}
           >
@@ -63,6 +64,7 @@ export default function App() {
 
         <DownloadPdfButton floating />
         <ProjectNotice />
+        <CoffeeWidget />
       </div>
 
       <Drawer
